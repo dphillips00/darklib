@@ -5,15 +5,17 @@ Spyder Editor
 #!/Users/dan/anaconda/bin/python
 This is a temporary script file.
 """
-dir = '/Volumes/Omega/astro'
 import subprocess
+import os.path
 import fractions
-
+from scipy import misc
+import matplotlib.pyplot as plt
+ 
 class darkfile(object):
     def __init__(self, filename):
         self.filename = filename
         self.metadict = {}
-        execstr = 'exiftool -Model -ISO -ExposureTime \
+        execstr = 'exiftool -d ' + r'"%Y%m%d_%H%M%S"' + ' -AllDates -Model -ISO -ExposureTime \
             -LongExposureNoiseReduction -LongExposureNoiseReduction2 \
             -CameraTemperature %s' % filename
         p = subprocess.Popen(execstr, stdout=subprocess.PIPE, shell=True)
@@ -31,21 +33,44 @@ class darkfile(object):
         self.ISO = int(self.metadict["ISO"])
 # convert exposure times reported as e.g. '1/10':
         self.exptime = float(fractions.Fraction(self.metadict["Exposure Time"]))
-            
-if __name__ == "__main__":
+
+        self.date = self.metadict["Modify Date"]
+
+def raw_to_tiff(tiff_dir, mydark):   #output directory & dark object
+    
+    if not os.path.exists(mydark.filename):
+        print "%s not found" % mydark.filename
+        return
+    
+    newbase = mydark.date + '_' + 'ISO'+ str(mydark.ISO) + '_' + str(mydark.exptime) + 's.tiff'
+    newname = tiff_dir + newbase
+    if os.path.exists(newname):
+        print "%s already exists; skipping"
+        return
+    else:
+        execstr = 'dcraw -4 -T -D -c %s > %s' % (mydark.filename, newname)
+        print execstr
+        p = subprocess.call(execstr, stdout=subprocess.PIPE, shell=True)
+    
+def add_darks(dir, the_list):
     findstr = "find %s -path '*dark*CR2' | grep -vi 'flat'" % (dir)
     p = subprocess.Popen(findstr, stdout=subprocess.PIPE, shell=True)
     
     filelist = p.stdout.read().decode('utf-8').rstrip()
     filearr = filelist.split('\n')
-    
-    darklist = []
     for file in filearr: 
         print file 
         try:
             darklist.append(darkfile(file))
         except ValueError:
-            print "exif error: skipped file %s" %file        
+            print "exif error; skipped file %s" %file        
             pass
-    
-        
+
+if __name__ == "__main__":
+    raw_dir = '/Volumes/Omega/astro'
+    tiff_dir = '/Users/dan/code/darklib/tiff_tmp/'
+  
+    darklist = []
+    add_darks(raw_dir, darklist)
+    for dark in darklist:
+        raw_to_tiff(tiff_dir, dark)
