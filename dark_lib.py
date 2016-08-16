@@ -8,6 +8,7 @@ This is a temporary script file.
 import subprocess
 import os.path
 import fractions
+import numpy as np
 from scipy import misc
 import matplotlib.pyplot as plt
  
@@ -35,7 +36,10 @@ class darkfile(object):
         self.exptime = float(fractions.Fraction(self.metadict["Exposure Time"]))
 
         self.date = self.metadict["Modify Date"]
-
+    
+    def update_name(self, new_filename):
+        self.filename = new_filename
+        
 def raw_to_tiff(tiff_dir, mydark):   #output directory & dark object
     
     if not os.path.exists(mydark.filename):
@@ -43,23 +47,30 @@ def raw_to_tiff(tiff_dir, mydark):   #output directory & dark object
         return
     
     newbase = mydark.date + '_' + 'ISO'+ str(mydark.ISO) + '_' + str(mydark.exptime) + 's.tiff'
-    newname = tiff_dir + newbase
+    newname = tiff_dir.rstrip('/') + '/' + newbase
     if os.path.exists(newname):
-        print "%s already exists; skipping"
+        print "%s already exists; skipping" % newname        
         return
     else:
         execstr = 'dcraw -4 -T -D -c %s > %s' % (mydark.filename, newname)
+        execstr2 = 'exiftool -TagsFromFile %s %s' % (mydark.filename, newname)
         print execstr
-        p = subprocess.call(execstr, stdout=subprocess.PIPE, shell=True)
-    
-def add_darks(dir, the_list):
-    findstr = "find %s -path '*dark*CR2' | grep -vi 'flat'" % (dir)
+        p1 = subprocess.call(execstr, stdout=subprocess.PIPE, shell=True)
+        p2 = subprocess.call(execstr2, stdout=subprocess.PIPE, shell=True)
+        print newname
+        mydark.update_name(newname)
+        
+def add_darks(thedir, the_list):
+    findstr = "find %s -path '*dark*CR2' | grep -vi 'flat'" % (thedir) \
+      + "; find %s -path '*dark*tiff' | grep -vi 'flat'" % (thedir)
     p = subprocess.Popen(findstr, stdout=subprocess.PIPE, shell=True)
     
     filelist = p.stdout.read().decode('utf-8').rstrip()
     filearr = filelist.split('\n')
+    
+#    print filearr
     for file in filearr: 
-        print file 
+#        print file 
         try:
             darklist.append(darkfile(file))
         except ValueError:
@@ -67,10 +78,14 @@ def add_darks(dir, the_list):
             pass
 
 if __name__ == "__main__":
-    raw_dir = '/Volumes/Omega/astro'
-    tiff_dir = '/Users/dan/code/darklib/tiff_tmp/'
+ #   raw_dir = '/Volumes/Omega/astro'
+#    raw_dir = '/Volumes/Delta/phot_orig'
+    tiff_dir = '/Users/dan/code/darklib/tiff_tmp'
   
     darklist = []
-    add_darks(raw_dir, darklist)
+    add_darks(tiff_dir, darklist)
     for dark in darklist:
         raw_to_tiff(tiff_dir, dark)
+    sub_list = filter(lambda x: x.ISO == 800 and int(x.exptime) == 120, darklist)
+    a = np.concatenate([np.array(misc.imread(aux.filename))[..., np.newaxis] \
+                        for aux in sub_list], axis=2)
