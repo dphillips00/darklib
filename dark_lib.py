@@ -80,15 +80,15 @@ def add_darks(thedir, the_list):
             pass
 
 if __name__ == "__main__":
-    raw_dir = '/Users/dan/phot'
+    raw_dir = '/Users/dan/Desktop'
  #   raw_dir = '/Volumes/Omega/astro'
 #    raw_dir = '/Volumes/Delta/phot_orig'
     tiff_dir = '/Users/dan/code/darklib/tiff_tmp'
   
     darklist = []
-    add_darks(raw_dir, darklist)
+    add_darks(tiff_dir, darklist)
     for dark in darklist:
         raw_to_tiff(tiff_dir, dark)
-    sub_list = filter(lambda x: x.ISO == 800 and int(x.exptime) == 120, darklist)
-    a = np.concatenate([np.array(misc.imread(aux.filename))[..., np.newaxis] \
-                        for    aux in sub_list], axis=2)
+#    sub_list = filter(lambda x: x.ISO == 800 and int(x.exptime) == 120, darklist)
+#    a = np.concatenate([np.array(misc.imread(aux.filename))[..., np.newaxis] \
+#                        for    aux in sub_list], axis=2)
