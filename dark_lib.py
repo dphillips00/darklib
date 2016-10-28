@@ -39,7 +39,7 @@ class darkfile(object):
     
     def update_name(self, new_filename):
         self.filename = new_filename
-        
+
 def raw_to_tiff(tiff_dir, mydark):   #output directory & dark object
     
     if not os.path.exists(mydark.filename):
@@ -61,9 +61,18 @@ def raw_to_tiff(tiff_dir, mydark):   #output directory & dark object
         p2 = subprocess.call(execstr2, stdout=subprocess.PIPE, shell=True)
 #        print(newname)
         mydark.update_name(newname)
-        
+
+def build_data(the_list):
+    #build array of data:
+    return np.concatenate([get_data(aux)[..., np.newaxis] \
+                        for aux in the_list], axis=2)
+	
+def get_data(the_dark):
+	return np.array(misc.imread(the_dark.filename))
+
 def add_darks(thedir, the_list):
-    findstr = "find %s -path '*dark*CR2' | grep -vi 'flat'" % (thedir) \
+    findstr = "find %s -path '*dark*CR2'" % (thedir) \
+      + "; find %s -path '*dk*CR2'" % (thedir) \
       + "; find %s -path '*dark*tiff' | grep -vi 'flat'" % (thedir)
     p = subprocess.Popen(findstr, stdout=subprocess.PIPE, shell=True)
     
@@ -79,16 +88,18 @@ def add_darks(thedir, the_list):
             print("exif error; skipped file %s" %file)
             pass
 
-if __name__ == "__main__":
-    raw_dir = '/Users/dan/Desktop'
- #   raw_dir = '/Volumes/Omega/astro'
-#    raw_dir = '/Volumes/Delta/phot_orig'
-    tiff_dir = '/Users/dan/code/darklib/tiff_tmp'
-  
-    darklist = []
-    add_darks(tiff_dir, darklist)
-    for dark in darklist:
-        raw_to_tiff(tiff_dir, dark)
+#if __name__ == "__main__":
+#   raw_dir = '/Users/dan/phot'
+#   raw_dir = '/Volumes/Omega/astro'
+#   raw_dir = '/Volumes/Delta/phot_orig'
+raw_dir = '/Users/dan/code/darklib/tiff_tmp'
+#    raw_dir = '/Users/dan/Desktop/bias_dark'
+tiff_dir = '/Users/dan/code/darklib/tiff_tmp'
+
+darklist = []
+add_darks(raw_dir, darklist)
+sub_EOSM = list(filter(lambda x: x.temp is not False, darklist))
+for dark in sub_EOSM:
+	raw_to_tiff(tiff_dir, dark)
 #    sub_list = filter(lambda x: x.ISO == 800 and int(x.exptime) == 120, darklist)
-#    a = np.concatenate([np.array(misc.imread(aux.filename))[..., np.newaxis] \
-#                        for    aux in sub_list], axis=2)
+#    a = build_data(sub_list)
