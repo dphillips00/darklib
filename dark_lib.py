@@ -64,11 +64,18 @@ def raw_to_tiff(tiff_dir, mydark):   #output directory & dark object
 
 def build_data(the_list):
     #build array of data:
-    return np.concatenate([get_data(aux)[..., np.newaxis] \
+    return np.concatenate([get_data(aux.filename)[..., np.newaxis] \
                         for aux in the_list], axis=2)
 	
-def get_data(the_dark):
-	return np.array(misc.imread(the_dark.filename))
+def get_data(filename):
+	return np.array(misc.imread(filename),dtype=np.int16)
+
+def get_fulldata_raw(filename):
+	#return full array, including non-image pixels (optical black etc.)
+	execstr = 'dcraw -4 -T -E -c -t 0 %s > %s' % (filename, 'tmp.tiff')
+	p1 = subprocess.call(execstr, stdout=subprocess.PIPE, shell=True)
+	return get_data('tmp.tiff')
+	p2 = subprocess.call('rm tmp.tiff',stdout=subprocess.PIPE, shell=True)
 
 def add_darks(thedir, the_list):
     findstr = "find %s -path '*dark*CR2'" % (thedir) \
@@ -92,9 +99,10 @@ def add_darks(thedir, the_list):
 #   raw_dir = '/Users/dan/phot'
 #   raw_dir = '/Volumes/Omega/astro'
 #   raw_dir = '/Volumes/Delta/phot_orig'
-raw_dir = '/Users/dan/code/darklib/tiff_tmp'
-#    raw_dir = '/Users/dan/Desktop/bias_dark'
-tiff_dir = '/Users/dan/code/darklib/tiff_tmp'
+#raw_dir = '/Users/dan/code/darklib/tiff_tmp'
+raw_dir = '/Users/dan/Desktop/dark/dark_warm'
+tiff_dir='/Users/dan/code/darklib/warm_tiff'
+#tiff_dir = '/Users/dan/code/darklib/tiff_tmp'
 
 darklist = []
 add_darks(raw_dir, darklist)
